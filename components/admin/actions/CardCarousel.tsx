@@ -22,12 +22,14 @@ export default function CardCarousel({ urls }: Props) {
 					<CarouselItem key={url.url} className='size-full aspect-video pl-0'>
 						{url.type === 'image' ? (
 							<img
+								key={`carousel-${url.url}`}
 								src={url.url}
 								alt={url.url}
 								className='rounded-md size-full object-cover'
 							/>
 						) : (
 							<video
+								key={`carousel-${url.url}`}
 								src={url.url}
 								className='rounded-md size-full object-cover'
 							/>

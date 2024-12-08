@@ -5,7 +5,8 @@ import { UserMedia } from '@/types';
 import { useEffect } from 'react';
 import { Button } from '../ui/button';
 
-// see https://stackoverflow.com/questions/3354239/hiding-the-mouse-cursor-when-idle-using-javascript, if want to hide cursor
+// see https://stackoverflow.com/questions/3354239/hiding-the-mouse-cursor-when-idle-using-javascript
+// if want to hide cursor when idle
 
 export default function MediaViewer({
 	media,
@@ -18,14 +19,14 @@ export default function MediaViewer({
 	const isIdle = useMouseIdle(2000); // 2 seconds before controls hide
 
 	useEffect(() => {
-		if (media.type === 'video') return;
-		const timeOut = setTimeout(() => {
+		let timeOut;
+		if (media.type === 'video') return clearTimeout(timeOut);
+
+		timeOut = setTimeout(() => {
 			handleNext();
 		}, 5000);
 
-		return () => {
-			clearTimeout(timeOut);
-		};
+		return () => clearTimeout(timeOut);
 	}, [media]);
 
 	return (
@@ -41,17 +42,19 @@ export default function MediaViewer({
 			</div>
 
 			{media.type === 'image' ? (
-				<img
-					src={media.url}
-					alt={media.url}
-					className='w-full h-full object-cover'
-				/>
+				<>
+					<img
+						src={media.url}
+						alt={media.url}
+						className='w-full h-full object-cover'
+					/>
+				</>
 			) : (
 				<video
 					src={media.url}
 					className='w-full h-full object-cover'
 					autoPlay
-					controls={!isIdle}
+					controls={process.env.NODE_ENV === 'development'}
 					onEnded={handleNext}
 				/>
 			)}

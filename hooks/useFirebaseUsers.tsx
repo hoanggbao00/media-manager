@@ -24,10 +24,12 @@ export function useFirebaseUsers() {
 			);
 			setUsers(usersList);
 			setLoading(false);
+			return usersList;
 		} catch (err) {
 			console.log(err);
 			setError('Failed to fetch users');
 			setLoading(false);
+			throw err;
 		}
 	};
 
@@ -52,8 +54,8 @@ export function useFirebaseUsers() {
 	const updateUser = async (id: string, data: Partial<User>) => {
 		try {
 			await updateDoc(doc(db, 'users', id), data);
-			setUsers(
-				users.map((user) => (user.id === id ? { ...user, ...data } : user))
+			setUsers((prev) =>
+				prev.map((user) => (user.id === id ? { ...user, ...data } : user))
 			);
 		} catch (err) {
 			console.log(err);
@@ -71,5 +73,10 @@ export function useFirebaseUsers() {
 		}
 	};
 
-	return { users, loading, error, addUser, updateUser, deleteUser };
+	const mutateUSer = async () => {
+		const data = await fetchUsers();
+		return data
+	};
+
+	return { users, loading, error, addUser, updateUser, deleteUser, mutateUSer };
 }

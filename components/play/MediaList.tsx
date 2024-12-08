@@ -1,21 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserMedia } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import MediaViewer from './MediaViewer';
 import { Button } from '../ui/button';
+import useSWR from 'swr';
+import { Loader2 } from 'lucide-react';
 
 export default function MediaList() {
-	const [media, setMedia] = useState<UserMedia[]>([]);
-	const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-	const { user, logOut } = useAuthStore();
-
-	useEffect(() => {
-		if (user) {
-			fetchAssignedMedia();
-		}
-	}, [user]);
+	const { user, logOut, setStatus, status } = useAuthStore();
 
 	const fetchAssignedMedia = async () => {
 		if (!user) return;
@@ -25,6 +19,13 @@ export default function MediaList() {
 			const q = query(mediaRef, where('username', '==', user.username));
 			const querySnapshot = await getDocs(q);
 
+			if (querySnapshot.empty) {
+				return [];
+			}
+
+			if (status !== querySnapshot.docs[0].data().status)
+				setStatus(querySnapshot.docs[0].data().status);
+
 			const mediaData: UserMedia[] = (
 				querySnapshot.docs[0].data().mediaPlaying as UserMedia[]
 			).map((item) => ({
@@ -32,34 +33,53 @@ export default function MediaList() {
 				url: item.url,
 			}));
 
-			setMedia(mediaData ?? []);
+			return mediaData ?? [];
 		} catch (error) {
 			console.error('Error fetching media:', error);
+			return [];
 		}
 	};
 
-	// useEffect(() => {
-	// 	if (media.length === 0) {
-	// 		return;
-	// 	}
-	// 	const mediaLength = media.length;
-
-	// 	const interval = setInterval(() => {
-	// 		setCurrentMediaIndex((prevIndex) =>
-	// 			prevIndex === mediaLength - 1 ? 0 : prevIndex + 1
-	// 		);
-	// 	}, 5000);
-
-	// 	return () => clearInterval(interval);
-	// }, [media]);
+	const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+	const { data: media, isLoading } = useSWR<UserMedia[] | undefined>(
+		'/play',
+		() => fetchAssignedMedia(),
+		{
+			refreshInterval: 5000,
+		}
+	);
 
 	const handleNext = () => {
+		if (!media) return;
 		setCurrentMediaIndex((prevIndex) =>
 			prevIndex === media.length - 1 ? 0 : prevIndex + 1
 		);
 	};
 
-	if (media.length === 0) {
+	if (isLoading)
+		return (
+			<div className='flex flex-col items-center justify-center h-screen gap-2'>
+				<Loader2 size={64} className='animate-spin text-primary' />
+				Đang lấy dữ liệu, vui lòng đợi...
+			</div>
+		);
+
+	if (status === 'disconnect') {
+		return (
+			<div className='flex flex-col items-center justify-center h-screen gap-2'>
+				<p className='text-xl text-gray-500'>This session has been disconnected by an Admin</p>
+				<Button
+					variant='outline'
+					className='text-destructive hover:bg-destructive/20'
+					onClick={() => logOut()}
+				>
+					Logout
+				</Button>
+			</div>
+		);
+	}
+
+	if (media?.length === 0) {
 		return (
 			<div className='flex flex-col items-center justify-center h-screen gap-2'>
 				<p className='text-xl text-gray-500'>No media assigned to you</p>
@@ -74,5 +94,9 @@ export default function MediaList() {
 		);
 	}
 
-	return <MediaViewer media={media[currentMediaIndex]} handleNext={handleNext}/>;
+	return (
+		media && (
+			<MediaViewer media={media[currentMediaIndex]} handleNext={handleNext} />
+		)
+	);
 }

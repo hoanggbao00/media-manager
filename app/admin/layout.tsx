@@ -1,5 +1,5 @@
 import { AdminSidebar } from '@/components/admin/sidebar';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function AdminLayout({
 	children,
@@ -10,7 +10,10 @@ export default function AdminLayout({
 		<SidebarProvider>
 			<div className='flex w-full h-screen'>
 				<AdminSidebar />
-				<main className='flex-1 overflow-y-auto p-6'>{children}</main>
+				<main className='flex-1 overflow-y-auto p-6'>
+					<SidebarTrigger />
+					{children}
+				</main>
 			</div>
 		</SidebarProvider>
 	);

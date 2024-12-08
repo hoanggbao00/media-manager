@@ -29,13 +29,18 @@ const navItems = [
 
 export function AdminSidebar() {
 	const pathname = usePathname();
-	const { logOut } = useAuthStore();
+	const { logOut, isAdmin } = useAuthStore();
   const router = useRouter()
 
   const handleLogout = () => {
     logOut();
     router.push('/');
   };
+	
+	if (!isAdmin) {
+		router.replace('/')
+		return null
+	};
 
 	return (
 		<Sidebar>
