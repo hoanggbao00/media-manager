@@ -4,6 +4,8 @@ import { useMouseIdle } from '@/hooks/useMouseIdle';
 import { UserMedia } from '@/types';
 import { useEffect } from 'react';
 import { Button } from '../ui/button';
+import YoutubeEmbed from '../admin/light-box/YoutubeEmbed';
+import { getYoutubeID } from '@/lib/utils';
 
 // see https://stackoverflow.com/questions/3354239/hiding-the-mouse-cursor-when-idle-using-javascript
 // if want to hide cursor when idle
@@ -20,7 +22,7 @@ export default function MediaViewer({
 
 	useEffect(() => {
 		let timeOut;
-		if (media.type === 'video') return clearTimeout(timeOut);
+		if (media.type === 'video' || media.type === 'youtube') return clearTimeout(timeOut);
 
 		timeOut = setTimeout(() => {
 			handleNext();
@@ -49,7 +51,7 @@ export default function MediaViewer({
 						className='w-full h-full object-cover'
 					/>
 				</>
-			) : (
+			) : media.type === 'video' ? (
 				<video
 					src={media.url}
 					className='w-full h-full object-cover'
@@ -57,6 +59,14 @@ export default function MediaViewer({
 					controls={process.env.NODE_ENV === 'development'}
 					onEnded={handleNext}
 				/>
+			) : (
+				getYoutubeID(media.url) && (
+					<YoutubeEmbed
+						url={getYoutubeID(media.url)!}
+						autoPlay
+						className='w-full h-full object-cover'
+					/>
+				)
 			)}
 		</div>
 	);

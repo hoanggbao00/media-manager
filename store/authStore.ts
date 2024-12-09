@@ -23,9 +23,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 	logOut: async () => {
 		const userId = get().user?.id;
 		if (!userId) return;
-		await updateDoc(doc(db, 'users', userId), {
-			status: 'disconnect',
-		});
+		if (!get().isAdmin) {
+			await updateDoc(doc(db, 'users', userId), {
+				status: 'disconnect',
+			});
+		}
 		set({ user: null });
 	},
 }));

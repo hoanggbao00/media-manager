@@ -72,6 +72,8 @@ import { UploadImage } from '@/lib/upload';
 import toast from 'react-hot-toast';
 import { UserMedia } from '@/types';
 import LightBoxImage from '@/components/admin/light-box/LightBox';
+import { getYoutubeID } from '@/lib/utils';
+import YoutubeEmbed from '@/components/admin/light-box/YoutubeEmbed';
 
 type MediaFormData = z.infer<typeof mediaSchema>;
 
@@ -97,9 +99,10 @@ export default function MediaManagement() {
 		},
 	});
 
+	// File size
 	const dropZoneConfig = {
 		maxFiles: 1,
-		maxSize: 1024 * 1024 * 4,
+		maxSize: 1024 * 1024 * 10,
 		multiple: false,
 		accept: {
 			'image/png': [],
@@ -115,14 +118,19 @@ export default function MediaManagement() {
 		setIsSubmiting(true);
 		try {
 			if (editingMedia) {
-				let url = editingMedia.url;
-				if (url !== previewUrl) {
-					url = await UploadImage(files![0]);
+				let url = data.url;
+				if (!isUrl) {
+					if (url !== previewUrl) {
+						url = await UploadImage(files![0]);
+					}
 				}
 				await updateMedia(editingMedia.id!, { ...data, url });
 				setEditingMedia(null);
 			} else {
-				const url = await UploadImage(files![0]);
+				let url = data.url;
+				if (!isUrl) {
+					url = await UploadImage(files![0]);
+				}
 				await addMedia({ ...data, url });
 				setIsAdding(false);
 			}
@@ -242,6 +250,7 @@ export default function MediaManagement() {
 												<SelectContent>
 													<SelectItem value='image'>Image</SelectItem>
 													<SelectItem value='video'>Video</SelectItem>
+													<SelectItem value='youtube'>Youtube</SelectItem>
 												</SelectContent>
 											</Select>
 											<FormMessage />
@@ -260,8 +269,19 @@ export default function MediaManagement() {
 												<Input
 													{...field}
 													onChange={(e) => {
-														setPreviewUrl(e.target.value);
 														field.onChange(e.target.value);
+														if (!e.target.value) return setPreviewUrl(null);
+
+														if (form.getValues().type === 'youtube') {
+															const url = getYoutubeID(e.target.value);
+															if (url) {
+																setPreviewUrl(url);
+															} else {
+																setPreviewUrl(e.target.value);
+															}
+														} else {
+															setPreviewUrl(e.target.value);
+														}
 													}}
 												/>
 											</FormControl>
@@ -340,12 +360,16 @@ export default function MediaManagement() {
 											alt='Preview'
 											className='max-w-full h-auto'
 										/>
-									) : (
+									) : form.getValues('type') === 'video' ? (
 										<video
 											src={previewUrl}
 											controls
 											className='max-w-full h-auto'
 										/>
+									) : (
+										getYoutubeID(form.getValues('url')) && (
+											<YoutubeEmbed autoPlay={false} url={getYoutubeID(form.getValues('url'))!} />
+										)
 									)}
 								</div>
 							)}
@@ -494,11 +518,19 @@ export default function MediaManagement() {
 												alt={item.name}
 												className=' size-20 object-cover'
 											/>
-										) : (
+										) : item.type === 'video' ? (
 											<video
 												src={item.url}
 												className='w-20 h-20 object-cover'
 											/>
+										) : (
+											getYoutubeID(form.getValues().url) && (
+												<YoutubeEmbed
+													autoPlay={false}
+													url={getYoutubeID(form.getValues().url)!}
+													className='w-20 h-20 object-cover'
+												/>
+											)
 										)}
 									</TableCell>
 									<TableCell>{item.name}</TableCell>

@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import YoutubeEmbed from './YoutubeEmbed';
+import { getYoutubeID } from '@/lib/utils';
 
 interface Props {
-	type: 'image' | 'video';
+	type: 'image' | 'video' | 'youtube';
 	url: string;
 	onClose: () => void;
 }
@@ -20,9 +22,24 @@ export default function LightBoxImage({ type, url, onClose }: Props) {
 			</Button>
 			<div className='absolute z-10 w-full aspect-video md:w-2/3 bg-white rounded-md'>
 				{type === 'image' ? (
-					<img src={url} alt={url} className='size-full object-cover rounded-md' />
+					<img
+						src={url}
+						alt={url}
+						className='size-full object-cover rounded-md'
+					/>
+				) : type === 'video' ? (
+					<video
+						src={url}
+						className='size-full object-cover rounded-md'
+						controls
+					/>
 				) : (
-					<video src={url} className='size-full object-cover rounded-md' controls />
+					getYoutubeID(url) && (
+						<YoutubeEmbed
+							url={getYoutubeID(url)!}
+							className='size-full object-cover rounded-md'
+						/>
+					)
 				)}
 			</div>
 		</div>

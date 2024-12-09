@@ -10,10 +10,11 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { useFirebaseMedia } from '@/hooks/useFirebaseMedia';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeID } from '@/lib/utils';
 import { User, UserMedia } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import YoutubeEmbed from '../light-box/YoutubeEmbed';
 
 interface Props {
 	user: User | null;
@@ -63,13 +64,20 @@ export default function AssignDialog(props: Props) {
 										),
 									}
 								)}
-								onClick={() =>
+								onClick={() => {
+									if(mediaSelected[0].type === 'youtube') {
+										if(mediaSelected[0].url === media.url) {
+											return setMediaSelected([])
+										} else {
+											return setMediaSelected([media])
+										}
+									}
 									setMediaSelected((prev) =>
 										prev.some((item) => item.url === media.url)
 											? prev.filter((item) => item.url !== media.url)
 											: [...prev, media]
-									)
-								}
+									);
+								}}
 							>
 								<CardContent className='p-4 w-full '>
 									<div className='w-full aspect-video relative overflow-hidden'>
@@ -81,13 +89,23 @@ export default function AssignDialog(props: Props) {
 												className='w-full h-full object-cover mb-2 rounded-md'
 												onClick={() => props.setLightBox(media)}
 											/>
-										) : (
+										) : media.type === 'video' ? (
 											<video
 												key={`dialog-${media.id}`}
 												src={media.url}
 												className='absolute inset-0 object-cover mb-2'
 												onClick={() => props.setLightBox(media)}
 											/>
+										) : (
+											getYoutubeID(media.url) && (
+												<YoutubeEmbed
+													url={getYoutubeID(media.url)!}
+													className='absolute inset-0 object-cover mb-2'
+													key={`dialog-${media.id}`}
+													autoPlay={false}
+													onClick={() => props.setLightBox(media)}
+												/>
+											)
 										)}
 									</div>
 									<h3 className='font-semibold'>{media.name}</h3>

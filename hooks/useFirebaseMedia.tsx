@@ -13,7 +13,7 @@ interface Media {
 	id: string;
 	url: string;
 	name: string;
-	type: 'image' | 'video';
+	type: 'image' | 'video' | 'youtube';
 }
 
 export function useFirebaseMedia() {

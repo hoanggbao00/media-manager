@@ -9,6 +9,8 @@ import {
 	CarouselPrevious,
 } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
+import { getYoutubeID } from '@/lib/utils';
+import YoutubeEmbed from './YoutubeEmbed';
 interface Props {
 	medias: UserMedia[];
 	onClose: () => void;
@@ -29,18 +31,28 @@ export default function LightBoxListImage({ medias, onClose }: Props) {
 				<Carousel plugins={[Autoplay()]} className='w-full aspect-video'>
 					<CarouselContent className='size-full ml-0'>
 						{medias.map((url) => (
-							<CarouselItem key={url.url} className='size-full aspect-video pl-0'>
+							<CarouselItem
+								key={url.url}
+								className='size-full aspect-video pl-0'
+							>
 								{url.type === 'image' ? (
 									<img
 										src={url.url}
 										alt={url.url}
 										className='rounded-md size-full object-cover'
 									/>
-								) : (
+								) : url.type === 'video' ? (
 									<video
 										src={url.url}
 										className='rounded-md size-full object-cover'
 									/>
+								) : (
+									getYoutubeID(url.url) && (
+										<YoutubeEmbed
+											url={getYoutubeID(url.url)!}
+											className='rounded-md size-full object-cover'
+										/>
+									)
 								)}
 							</CarouselItem>
 						))}

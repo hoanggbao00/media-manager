@@ -1,10 +1,10 @@
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {children}
-      <Toaster position="top-right" />
-    </>
-  )
+	return (
+		<>
+			{children}
+			<Toaster position='top-right' />
+		</>
+	);
 }

@@ -4,14 +4,16 @@ import {
 	CarouselContent,
 	CarouselItem,
 } from '@/components/ui/carousel';
+import { getYoutubeID } from '@/lib/utils';
 import { UserMedia } from '@/types';
 import Autoplay from 'embla-carousel-autoplay';
+import YoutubeEmbed from '../light-box/YoutubeEmbed';
 
 interface Props {
 	urls: UserMedia[];
 }
 
-export default function CardCarousel({ urls }: Props) {
+export default function CardCarousel({ urls}: Props) {
 	return (
 		<Carousel
 			plugins={[Autoplay()]}
@@ -27,12 +29,21 @@ export default function CardCarousel({ urls }: Props) {
 								alt={url.url}
 								className='rounded-md size-full object-cover'
 							/>
-						) : (
+						) : url.type === 'video' ? (
 							<video
 								key={`carousel-${url.url}`}
 								src={url.url}
 								className='rounded-md size-full object-cover'
 							/>
+						) : (
+							getYoutubeID(url.url) && (
+								<YoutubeEmbed
+									url={getYoutubeID(url.url)!}
+									className='rounded-md size-full object-cover'
+									key={`carousel-${url.url}`}
+									onClick={() => {}}
+								/>
+							)
 						)}
 					</CarouselItem>
 				))}

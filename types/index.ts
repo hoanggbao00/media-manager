@@ -7,7 +7,7 @@ export interface User {
 }
 
 export type UserMedia = {
-	type: 'image' | 'video';
+	type: 'image' | 'video' | 'youtube';
 	url: string;
 };
 
