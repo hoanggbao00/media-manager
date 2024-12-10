@@ -13,7 +13,7 @@ import { useFirebaseMedia } from '@/hooks/useFirebaseMedia';
 import { cn, getYoutubeID } from '@/lib/utils';
 import { User, UserMedia } from '@/types';
 import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import YoutubeEmbed from '../light-box/YoutubeEmbed';
 
 interface Props {
@@ -39,6 +39,13 @@ export default function AssignDialog(props: Props) {
 			setSubmitting(false);
 		}
 	};
+
+	useEffect(() => {
+		if (props.user && props.user.mediaPlaying) {
+			setMediaSelected(props.user.mediaPlaying);
+		}
+
+	}, [props.user])
 
 	return (
 		<DialogContent className='md:min-w-[70vw]'>

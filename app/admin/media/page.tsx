@@ -61,6 +61,7 @@ import YoutubeEmbed from '@/components/admin/light-box/YoutubeEmbed';
 import { Uploader, UploadResult } from '@/components/ui/Uploader';
 import toast from 'react-hot-toast';
 import { CloudinaryUploadWidgetResults } from 'next-cloudinary';
+import MediaTag from '@/components/admin/media/media-tag';
 
 type MediaFormData = z.infer<typeof mediaSchema>;
 
@@ -98,7 +99,7 @@ export default function MediaManagement() {
 			type: info.resource_type as 'image' | 'video',
 			url: info.secure_url,
 		};
-		
+
 		try {
 			await addMedia(data);
 			toast.success('Media uploaded successfully');
@@ -369,17 +370,18 @@ export default function MediaManagement() {
 												className='w-20 h-20 object-cover'
 											/>
 										) : (
-											getYoutubeID(form.getValues().url) && (
+											getYoutubeID(item.url) && (
 												<YoutubeEmbed
 													autoPlay={false}
-													url={getYoutubeID(form.getValues().url)!}
+													url={getYoutubeID(item.url)!}
 													className='w-20 h-20 object-cover'
+													onClick={() => {}}
 												/>
 											)
 										)}
 									</TableCell>
-									<TableCell>{item.name}</TableCell>
-									<TableCell>{item.type}</TableCell>
+									<TableCell className='text-ellipsis'>{item.name}</TableCell>
+									<TableCell className='text-center'><MediaTag tag={item.type} /></TableCell>
 									<TableCell>
 										<a
 											href={item.url}
@@ -424,12 +426,20 @@ export default function MediaManagement() {
 											alt={item.name}
 											className='w-full h-48 object-cover mb-2'
 										/>
-									) : (
+									) : item.type === 'video' ? (
 										<video
 											src={item.url}
 											className='w-full h-48 object-cover mb-2'
 											controls
 										/>
+									) : (
+										getYoutubeID(form.getValues('url')) && (
+											<YoutubeEmbed
+												className='w-full h-48 object-cover mb-2'
+												autoPlay={false}
+												url={getYoutubeID(form.getValues('url'))!}
+											/>
+										)
 									)}
 									<h3 className='font-semibold line-clamp-2'>{item.name}</h3>
 									<p className='text-sm text-gray-500'>{item.type}</p>
