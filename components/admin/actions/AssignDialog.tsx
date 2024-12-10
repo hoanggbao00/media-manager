@@ -65,17 +65,25 @@ export default function AssignDialog(props: Props) {
 									}
 								)}
 								onClick={() => {
-									if(mediaSelected[0].type === 'youtube') {
-										if(mediaSelected[0].url === media.url) {
-											return setMediaSelected([])
+									if (media.type === 'youtube') {
+										if (mediaSelected[0]?.type === 'youtube') {
+											return setMediaSelected([]);
 										} else {
-											return setMediaSelected([media])
+											return setMediaSelected([media]);
 										}
 									}
-									setMediaSelected((prev) =>
-										prev.some((item) => item.url === media.url)
-											? prev.filter((item) => item.url !== media.url)
-											: [...prev, media]
+
+									const newMedia = mediaSelected.filter(
+										(item) => item.type !== 'youtube'
+									);
+
+									setMediaSelected(
+										newMedia.some((item) => item.url === media.url)
+											? newMedia.filter(
+													(item) =>
+														item.url !== media.url && item.type !== 'youtube'
+											  )
+											: [...newMedia, media]
 									);
 								}}
 							>
@@ -108,7 +116,9 @@ export default function AssignDialog(props: Props) {
 											)
 										)}
 									</div>
-									<h3 className='font-semibold'>{media.name}</h3>
+									<h3 className='font-semibold w-full line-clamp-2'>
+										{media.name}
+									</h3>
 								</CardContent>
 							</Card>
 						))}
