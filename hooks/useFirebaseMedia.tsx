@@ -44,7 +44,7 @@ export function useFirebaseMedia() {
 	const addMedia = async (newMedia: Omit<Media, 'id'>) => {
 		try {
 			const docRef = await addDoc(collection(db, 'media'), newMedia);
-			setMedia([...media, { ...newMedia, id: docRef.id }]);
+			setMedia(prev => [...prev, { ...newMedia, id: docRef.id }]);
 		} catch (err) {
 			console.log(err);
 			setError('Failed to add media');

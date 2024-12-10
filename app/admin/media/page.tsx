@@ -25,7 +25,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from '@/components/ui/form';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	Table,
@@ -46,20 +45,7 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { z } from 'zod';
-import {
-	FileUploader,
-	FileInput,
-	FileUploaderContent,
-	FileUploaderItem,
-} from '@/components/ui/file-upload';
-import {
-	CloudUpload,
-	Loader2,
-	Paperclip,
-	Pencil,
-	Plus,
-	Trash,
-} from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
 	Select,
@@ -68,12 +54,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { UploadImage } from '@/lib/upload';
-import toast from 'react-hot-toast';
 import { UserMedia } from '@/types';
 import LightBoxImage from '@/components/admin/light-box/LightBox';
 import { getYoutubeID } from '@/lib/utils';
 import YoutubeEmbed from '@/components/admin/light-box/YoutubeEmbed';
+import { Uploader, UploadResult } from '@/components/ui/Uploader';
+import toast from 'react-hot-toast';
+import { CloudinaryUploadWidgetResults } from 'next-cloudinary';
 
 type MediaFormData = z.infer<typeof mediaSchema>;
 
@@ -84,10 +71,7 @@ export default function MediaManagement() {
 	const [isAdding, setIsAdding] = useState(false);
 	const [deletingMedia, setDeletingMedia] = useState<string | null>(null);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-	const [files, setFiles] = useState<File[] | null>([]);
-	const [isUrl, setIsUrl] = useState(false);
-	const [isSubmiting, setIsSubmiting] = useState(false);
-	const [isDropping, setIsDropping] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [lightBox, setLightBox] = useState<UserMedia>();
 
 	const form = useForm<MediaFormData>({
@@ -99,54 +83,54 @@ export default function MediaManagement() {
 		},
 	});
 
-	// File size
-	const dropZoneConfig = {
-		maxFiles: 1,
-		maxSize: 1024 * 1024 * 10,
-		multiple: false,
-		accept: {
-			'image/png': [],
-			'image/jpeg': [],
-			'video/mp4': [],
-		},
-	};
-
 	if (loading) return <div>Loading...</div>;
 	if (error) return <div>Error: {error}</div>;
 
+	const handleUpload = async (
+		result: CloudinaryUploadWidgetResults,
+		wget: any
+	) => {
+		if (!result.info) return;
+		const info = result.info as unknown as UploadResult;
+
+		const data: MediaFormData = {
+			name: info.display_name,
+			type: info.resource_type as 'image' | 'video',
+			url: info.secure_url,
+		};
+		
+		try {
+			await addMedia(data);
+			toast.success('Media uploaded successfully');
+			wget.close();
+		} catch (error) {
+			console.log(error);
+			toast.error('Failed to upload media');
+		}
+	};
+
 	const onSubmit = async (data: MediaFormData) => {
-		setIsSubmiting(true);
+		setIsSubmitting(true);
 		try {
 			if (editingMedia) {
-				let url = data.url;
-				if (!isUrl) {
-					if (url !== previewUrl) {
-						url = await UploadImage(files![0]);
-					}
-				}
-				await updateMedia(editingMedia.id!, { ...data, url });
+				await updateMedia(editingMedia.id!, { ...data });
 				setEditingMedia(null);
 			} else {
-				let url = data.url;
-				if (!isUrl) {
-					url = await UploadImage(files![0]);
-				}
-				await addMedia({ ...data, url });
+				await addMedia({ ...data });
 				setIsAdding(false);
 			}
 			form.reset();
 			setPreviewUrl(null);
-			setFiles(null);
 		} catch (error) {
 			console.log(error);
+			toast.error(`Failed to ${editingMedia ? 'update' : 'add'} media`);
 		} finally {
-			setIsSubmiting(false);
+			setIsSubmitting(false);
 		}
 	};
 
 	const handleEdit = (item: MediaFormData) => {
 		setEditingMedia(item);
-		setIsUrl(true);
 		form.reset(item);
 		setPreviewUrl(item.url);
 	};
@@ -155,10 +139,16 @@ export default function MediaManagement() {
 		setDeletingMedia(mediaId);
 	};
 
-	const confirmDelete = () => {
+	const confirmDelete = async () => {
 		if (deletingMedia) {
-			deleteMedia(deletingMedia);
-			setDeletingMedia(null);
+			try {
+				await deleteMedia(deletingMedia);
+				toast.success('Media deleted successfully');
+				setDeletingMedia(null);
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to delete media');
+			}
 		}
 	};
 
@@ -180,7 +170,6 @@ export default function MediaManagement() {
 						<Button
 							onClick={() => {
 								setIsAdding(true);
-								setIsUrl(true);
 							}}
 						>
 							<Plus /> Add
@@ -212,145 +201,62 @@ export default function MediaManagement() {
 									</FormItem>
 								)}
 							/>
-							<div className='flex justify-between pr-[30%]'>
-								<Label>URL or Upload</Label>
-								<RadioGroup
-									defaultValue='url'
-									onValueChange={(value) => {
-										setIsUrl(value === 'url');
-									}}
-									className='flex gap-8'
-								>
-									<div className='flex items-center space-x-2'>
-										<RadioGroupItem value='url' id='r2' />
-										<Label htmlFor='r2'>URL</Label>
-									</div>
-									<div className='flex items-center space-x-2'>
-										<RadioGroupItem value='upload' id='r3' />
-										<Label htmlFor='r3'>Upload</Label>
-									</div>
-								</RadioGroup>
-							</div>
-							{isUrl && (
-								<FormField
-									control={form.control}
-									name='type'
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Type</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												defaultValue={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder='Select type' />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value='image'>Image</SelectItem>
-													<SelectItem value='video'>Video</SelectItem>
-													<SelectItem value='youtube'>Youtube</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							)}
-							{isUrl && (
-								<FormField
-									control={form.control}
-									name='url'
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>URL</FormLabel>
-											<FormControl>
-												<Input
-													{...field}
-													onChange={(e) => {
-														field.onChange(e.target.value);
-														if (!e.target.value) return setPreviewUrl(null);
 
-														if (form.getValues().type === 'youtube') {
-															const url = getYoutubeID(e.target.value);
-															if (url) {
-																setPreviewUrl(url);
-															} else {
-																setPreviewUrl(e.target.value);
-															}
+							<FormField
+								control={form.control}
+								name='type'
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Type</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											defaultValue={field.value}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder='Select type' />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value='image'>Image</SelectItem>
+												<SelectItem value='video'>Video</SelectItem>
+												<SelectItem value='youtube'>Youtube</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name='url'
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>URL</FormLabel>
+										<FormControl>
+											<Input
+												{...field}
+												onChange={(e) => {
+													field.onChange(e.target.value);
+													if (!e.target.value) return setPreviewUrl(null);
+
+													if (form.getValues().type === 'youtube') {
+														const url = getYoutubeID(e.target.value);
+														if (url) {
+															setPreviewUrl(url);
 														} else {
 															setPreviewUrl(e.target.value);
 														}
-													}}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							)}
-
-							{!isUrl && (
-								<FileUploader
-									value={files}
-									onValueChange={(value) => {
-										setFiles(value);
-										if (!value) return;
-										if (!value[0]) {
-											setPreviewUrl(null);
-											return;
-										}
-										const fileName = value[0].name
-											.split('.')
-											.slice(0, -1)
-											.join('.');
-										const fileType = value[0].type.split('/')[0] as
-											| 'image'
-											| 'video';
-										if (!form.getValues().name) form.setValue('name', fileName);
-										form.setValue('type', fileType);
-										const url = URL.createObjectURL(value[0]);
-										setPreviewUrl(url);
-									}}
-									dropzoneOptions={dropZoneConfig}
-									className='relative bg-background rounded-lg p-2'
-								>
-									<FileInput
-										id='fileInput'
-										className='outline-dashed outline-1 outline-slate-500'
-									>
-										<div className='flex items-center justify-center flex-col p-2 w-full relative'>
-											<div
-												className={`${
-													files && files.length
-														? 'opacity-0'
-														: 'flex items-center justify-center flex-col w-full'
-												}`}
-											>
-												<CloudUpload className='text-gray-500 w-10 h-10' />
-												<p className='mb-1 text-sm text-gray-500 dark:tnt-sgray-400'>
-													<span className='font-semibold'>Click to upload</span>
-													&nbsp; or drag and drop
-												</p>
-												<p className='text-xs text-gray-500 dark:text-gray-400'>
-													SVG, PNG, JPG or GIF
-												</p>
-											</div>
-										</div>
-									</FileInput>
-									<FileUploaderContent>
-										{files &&
-											files.length > 0 &&
-											files.map((file, i) => (
-												<FileUploaderItem key={i} index={i}>
-													<Paperclip className='h-4 w-4 stroke-current' />
-													<span>{file.name}</span>
-												</FileUploaderItem>
-											))}
-									</FileUploaderContent>
-								</FileUploader>
-							)}
+													} else {
+														setPreviewUrl(e.target.value);
+													}
+												}}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 							<Label>Preview</Label>
 							{previewUrl && (
 								<div className='mt-4'>
@@ -368,7 +274,10 @@ export default function MediaManagement() {
 										/>
 									) : (
 										getYoutubeID(form.getValues('url')) && (
-											<YoutubeEmbed autoPlay={false} url={getYoutubeID(form.getValues('url'))!} />
+											<YoutubeEmbed
+												autoPlay={false}
+												url={getYoutubeID(form.getValues('url'))!}
+											/>
 										)
 									)}
 								</div>
@@ -379,9 +288,11 @@ export default function MediaManagement() {
 						<Button
 							type='submit'
 							onClick={form.handleSubmit(onSubmit)}
-							disabled={isSubmiting}
+							disabled={isSubmitting}
 						>
-							{isSubmiting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+							{isSubmitting && (
+								<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+							)}
 							{editingMedia ? 'Update Media' : 'Add Media'}
 						</Button>
 					</DialogFooter>
@@ -412,75 +323,9 @@ export default function MediaManagement() {
 			</AlertDialog>
 
 			{/* Table */}
-			<FileUploader
-				value={files}
-				onValueChange={async (value) => {
-					setFiles(value);
-					if (!value) return;
-					if (!value[0]) return;
-					setIsDropping(true);
-					const fileName = value[0].name.split('.').slice(0, -1).join('.');
-					const fileType = value[0].type.split('/')[0] as 'image' | 'video';
-
-					try {
-						const url = await UploadImage(value[0]);
-						await addMedia({
-							name: fileName,
-							type: fileType,
-							url,
-						});
-						setFiles(null);
-					} catch (error) {
-						console.log(error);
-						toast.error('Failed to upload image');
-					} finally {
-						setIsDropping(false);
-					}
-				}}
-				dropzoneOptions={dropZoneConfig}
-				className='relative bg-background rounded-lg p-2'
-			>
-				{!isDropping && (
-					<FileInput
-						id='fileInput'
-						className='outline-dashed outline-1 outline-slate-500'
-					>
-						<div className='flex items-center justify-center flex-col w-full relative'>
-							<div
-								className={`${
-									files && files.length
-										? 'opacity-0'
-										: 'flex items-center justify-center flex-col p-2 w-full'
-								}`}
-							>
-								<CloudUpload className='text-gray-500 w-10 h-10' />
-								<p className='mb-1 text-sm text-gray-500 dark:tnt-sgray-400'>
-									<span className='font-semibold'>Click to upload</span>
-									&nbsp; or drag and drop
-								</p>
-								<p className='text-xs text-gray-500 dark:text-gray-400'>
-									SVG, PNG, JPG or GIF
-								</p>
-							</div>
-						</div>
-					</FileInput>
-				)}
-				{isDropping && (
-					<div className='flex items-center justify-center w-full'>
-						<Loader2 className='w-10 h-10 animate-spin' />
-					</div>
-				)}
-				<FileUploaderContent>
-					{files &&
-						files.length > 0 &&
-						files.map((file, i) => (
-							<FileUploaderItem key={i} index={i}>
-								<Paperclip className='h-4 w-4 stroke-current' />
-								<span>{file.name}</span>
-							</FileUploaderItem>
-						))}
-				</FileUploaderContent>
-			</FileUploader>
+			<div>
+				<Uploader onUpload={handleUpload} />
+			</div>
 
 			<Tabs defaultValue='detailList'>
 				<TabsList>
